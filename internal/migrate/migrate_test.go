@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"go.uber.org/multierr"
+	"go4.org/sort"
 )
 
 func TestExecuteMigration(t *testing.T) {
@@ -24,6 +25,7 @@ func TestExecuteMigration(t *testing.T) {
 		inputDatabase          map[string]cbg.CBORMarshaler
 		expectedOutputDatabase map[string]cbg.CborBool
 		preloadOutputs         map[string]cbg.CborBool
+		expectedKeys           []datastore.Key
 		expectedErrs           []error
 	}{
 		"it works": {
@@ -35,6 +37,7 @@ func TestExecuteMigration(t *testing.T) {
 				"/apples":  true,
 				"/oranges": false,
 			},
+			expectedKeys: []datastore.Key{datastore.NewKey("/apples"), datastore.NewKey("/oranges")},
 		},
 		"issue unmarshalling old values": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -47,6 +50,7 @@ func TestExecuteMigration(t *testing.T) {
 				"/oranges": false,
 			},
 			expectedErrs: []error{errors.New("decoding state for key '/anotherkind': wrong type for int64 field: 7")},
+			expectedKeys: []datastore.Key{datastore.NewKey("/apples"), datastore.NewKey("/oranges")},
 		},
 		"issue transforming a value": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -59,6 +63,7 @@ func TestExecuteMigration(t *testing.T) {
 				"/oranges": false,
 			},
 			expectedErrs: []error{errors.New("attempting to transform to new state '/untransformable': the meaning of life is untransformable")},
+			expectedKeys: []datastore.Key{datastore.NewKey("/apples"), datastore.NewKey("/oranges")},
 		},
 		"value already tracked in DS": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -73,6 +78,7 @@ func TestExecuteMigration(t *testing.T) {
 				"/apples": false,
 			},
 			expectedErrs: []error{errors.New("already tracking state in new db for '/apples'")},
+			expectedKeys: []datastore.Key{datastore.NewKey("/oranges")},
 		},
 	}
 	transform := func(c *cbg.CborInt) (*cbg.CborBool, error) {
@@ -109,12 +115,14 @@ func TestExecuteMigration(t *testing.T) {
 					require.NoError(t, err)
 				}
 			}
-			err := migrate.ExecuteMigration(query.Query{}, ds1, ds2, oldType, transformValue)
+			migrated, err := migrate.ExecuteMigration(query.Query{}, ds1, ds2, oldType, transformValue)
 			errs := multierr.Errors(err)
 			require.Equal(t, len(data.expectedErrs), len(errs))
 			for i, err := range errs {
 				require.EqualError(t, err, data.expectedErrs[i].Error())
 			}
+			sort.Slice(migrated, func(i, j int) bool { return migrated[i].String() < migrated[j].String() })
+			require.Equal(t, data.expectedKeys, migrated)
 			outputDatabase := make(map[string]cbg.CborBool)
 			res, err := ds2.Query(query.Query{})
 			require.NoError(t, err)

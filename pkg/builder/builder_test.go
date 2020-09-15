@@ -114,7 +114,7 @@ func TestExecuteMigration(t *testing.T) {
 			if data.expectedErr == nil {
 				require.NoError(t, err)
 
-				err = migration.Up(ds1, ds2)
+				_, err = migration.Up(ds1, ds2)
 				require.NoError(t, err)
 
 				outputDatabase := make(map[string]*cbg.CborInt)
@@ -137,7 +137,7 @@ func TestExecuteMigration(t *testing.T) {
 				reversible, ok := migration.(versioning.ReversableDatastoreMigration)
 				if ok {
 					ds3 := datastore.NewMapDatastore()
-					err = reversible.Down(ds2, ds3)
+					_, err = reversible.Down(ds2, ds3)
 					require.NoError(t, err)
 
 					reversedDatabase := make(map[string]*cbg.CborInt)

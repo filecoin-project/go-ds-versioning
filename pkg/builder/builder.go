@@ -70,7 +70,7 @@ type dsMigration struct {
 	upFunc  reflect.Value
 }
 
-func (dm *dsMigration) Up(oldDs datastore.Batching, newDS datastore.Batching) error {
+func (dm *dsMigration) Up(oldDs datastore.Batching, newDS datastore.Batching) ([]datastore.Key, error) {
 	return migrate.ExecuteMigration(dm.query, oldDs, newDS, dm.oldType, dm.upFunc)
 }
 
@@ -79,7 +79,7 @@ type reversibleDsMigration struct {
 	downFunc reflect.Value
 }
 
-func (rdm *reversibleDsMigration) Down(newDs datastore.Batching, oldDs datastore.Batching) error {
+func (rdm *reversibleDsMigration) Down(newDs datastore.Batching, oldDs datastore.Batching) ([]datastore.Key, error) {
 	return migrate.ExecuteMigration(rdm.query, newDs, oldDs, rdm.newType, rdm.downFunc)
 }
 
