@@ -34,7 +34,7 @@ func TestExecuteMigration(t *testing.T) {
 		inputDatabase          map[string]*cbg.CborInt
 		expectedOutputDatabase map[string]*cbg.CborInt
 		upFunc                 versioning.MigrationFunc
-		configure              func(versioning.MigrationBuilder) versioning.MigrationBuilder
+		configure              func(builder.Builder) builder.Builder
 		expectedErr            error
 	}{
 		"it works": {
@@ -58,7 +58,7 @@ func TestExecuteMigration(t *testing.T) {
 				"/oranges": &changedOrangeCount,
 			},
 			upFunc: migrateFunc,
-			configure: func(builder versioning.MigrationBuilder) versioning.MigrationBuilder {
+			configure: func(builder builder.Builder) builder.Builder {
 				return builder.Reversible(unmigrateFunc)
 			},
 		},
@@ -71,7 +71,7 @@ func TestExecuteMigration(t *testing.T) {
 				"/apples": &changedAppleCount,
 			},
 			upFunc: migrateFunc,
-			configure: func(builder versioning.MigrationBuilder) versioning.MigrationBuilder {
+			configure: func(builder builder.Builder) builder.Builder {
 				return builder.FilterKeys([]string{"/oranges"})
 			},
 		},
@@ -82,7 +82,7 @@ func TestExecuteMigration(t *testing.T) {
 			},
 			upFunc:      migrateFunc,
 			expectedErr: errors.New("reversible function does not have inverse types"),
-			configure: func(builder versioning.MigrationBuilder) versioning.MigrationBuilder {
+			configure: func(builder builder.Builder) builder.Builder {
 				return builder.Reversible(func(c *cbg.CborInt) (*cbg.CborBool, error) {
 					var out cbg.CborBool
 					if *c != 0 {

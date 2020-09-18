@@ -20,13 +20,6 @@ type ReversableDatastoreMigration interface {
 	Down(newDs datastore.Batching, oldDS datastore.Batching) ([]datastore.Key, error)
 }
 
-// MigrationBuilder is an interface for constructing migrations
-type MigrationBuilder interface {
-	Reversible(down MigrationFunc) MigrationBuilder
-	FilterKeys([]string) MigrationBuilder
-	Build() (DatastoreMigration, error)
-}
-
 // VersionKey is an identifier for a databased version
 type VersionKey string
 

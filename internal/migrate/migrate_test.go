@@ -8,6 +8,8 @@ import (
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
+	"github.com/filecoin-project/go-ds-versioning/pkg/versioned"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	"github.com/stretchr/testify/require"
@@ -115,7 +117,7 @@ func TestExecuteMigration(t *testing.T) {
 					require.NoError(t, err)
 				}
 			}
-			migrated, err := migrate.ExecuteMigration(query.Query{}, ds1, ds2, oldType, transformValue)
+			migrated, err := migrate.Execute(query.Query{}, ds1, ds2, oldType, transformValue)
 			errs := multierr.Errors(err)
 			require.Equal(t, len(data.expectedErrs), len(errs))
 			for i, err := range errs {
@@ -142,4 +144,232 @@ func TestExecuteMigration(t *testing.T) {
 		})
 	}
 
+}
+
+func TestTo(t *testing.T) {
+	addMigration := func(c *cbg.CborInt) (*cbg.CborInt, error) {
+		newCount := *c + 7
+		return &newCount, nil
+	}
+	subMigration := func(c *cbg.CborInt) (*cbg.CborInt, error) {
+		newCount := *c - 7
+		return &newCount, nil
+	}
+	multiplyMigration := func(c *cbg.CborInt) (*cbg.CborInt, error) {
+		newCount := *c * 4
+		return &newCount, nil
+	}
+	divideMigration := func(c *cbg.CborInt) (*cbg.CborInt, error) {
+		newCount := *c / 4
+		return &newCount, nil
+	}
+	errorMigration := func(c *cbg.CborInt) (*cbg.CborInt, error) {
+		if *c == 10 {
+			return nil, errors.New("could not migrate")
+		}
+		newCount := *c + 5
+		return &newCount, nil
+	}
+
+	testCases := map[string]struct {
+		inputDatabase          map[string][]byte
+		expectedOutputDatabase map[string][]byte
+		migrationBuilders      versioned.BuilderList
+		target                 versioning.VersionKey
+		expectedFinalVersion   versioning.VersionKey
+		expectedErr            error
+	}{
+		"empty database": {
+			inputDatabase: map[string][]byte{},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+			},
+			target:               "2",
+			expectedFinalVersion: "2",
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(addMigration, "1").Reversible(subMigration),
+				versioned.NewVersionedBuilder(multiplyMigration, "2").Reversible(divideMigration).OldVersion("1"),
+			},
+		},
+		"unversioned database with data": {
+			inputDatabase: map[string][]byte{
+				"/apples":  numData(t, 7),
+				"/oranges": numData(t, 3),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+				"/2/apples":         numData(t, 56),
+				"/2/oranges":        numData(t, 40),
+			},
+			target:               "2",
+			expectedFinalVersion: "2",
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(addMigration, "1").Reversible(subMigration),
+				versioned.NewVersionedBuilder(multiplyMigration, "2").Reversible(divideMigration).OldVersion("1"),
+			},
+		},
+		"unversioned database with data, no initial migration": {
+			inputDatabase: map[string][]byte{
+				"/apples":  numData(t, 7),
+				"/oranges": numData(t, 3),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/apples":  numData(t, 7),
+				"/oranges": numData(t, 3),
+			},
+			target:               "2",
+			expectedFinalVersion: "",
+			expectedErr:          errors.New("cannot migrate from an unversioned database"),
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(multiplyMigration, "2").Reversible(divideMigration).OldVersion("1"),
+			},
+		},
+		"discontigous migration list": {
+			inputDatabase:          map[string][]byte{},
+			expectedOutputDatabase: map[string][]byte{},
+			target:                 "2",
+			expectedFinalVersion:   "",
+			expectedErr:            errors.New("migrations list must be contiguous"),
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(addMigration, "1").Reversible(subMigration),
+				versioned.NewVersionedBuilder(multiplyMigration, "3").Reversible(divideMigration).OldVersion("2"),
+			},
+		},
+		"normal migration": {
+			inputDatabase: map[string][]byte{
+				"/versions/current": versionData("1"),
+				"/1/apples":         numData(t, 14),
+				"/1/oranges":        numData(t, 10),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+				"/2/apples":         numData(t, 56),
+				"/2/oranges":        numData(t, 40),
+			},
+			target:               "2",
+			expectedFinalVersion: "2",
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(multiplyMigration, "2").Reversible(divideMigration).OldVersion("1"),
+			},
+		},
+		"incomplete migration": {
+			inputDatabase: map[string][]byte{
+				"/versions/current": versionData("1"),
+				"/1/apples":         numData(t, 14),
+				"/1/oranges":        numData(t, 10),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+				"/2/apples":         numData(t, 56),
+				"/2/oranges":        numData(t, 40),
+			},
+			target:               "3",
+			expectedErr:          errors.New("never reached target database version"),
+			expectedFinalVersion: "2",
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(multiplyMigration, "2").Reversible(divideMigration).OldVersion("1"),
+			},
+		},
+		"migrate down": {
+			inputDatabase: map[string][]byte{
+				"/versions/current": versionData("3"),
+				"/3/apples":         numData(t, 56),
+				"/3/oranges":        numData(t, 40),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("1"),
+				"/1/apples":         numData(t, 7),
+				"/1/oranges":        numData(t, 3),
+			},
+			target:               "1",
+			expectedFinalVersion: "1",
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(addMigration, "2").Reversible(subMigration).OldVersion("1"),
+				versioned.NewVersionedBuilder(multiplyMigration, "3").Reversible(divideMigration).OldVersion("2"),
+			},
+		},
+		"error while migrating, first migration": {
+			inputDatabase: map[string][]byte{
+				"/versions/current": versionData("1"),
+				"/1/apples":         numData(t, 14),
+				"/1/oranges":        numData(t, 10),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("1"),
+				"/1/apples":         numData(t, 14),
+				"/1/oranges":        numData(t, 10),
+			},
+			target:               "2",
+			expectedFinalVersion: "1",
+			expectedErr:          errors.New("running up migration: attempting to transform to new state '/oranges': could not migrate"),
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(errorMigration, "2").OldVersion("1"),
+			},
+		},
+		"error while migrating, second migration": {
+			inputDatabase: map[string][]byte{
+				"/versions/current": versionData("1"),
+				"/1/apples":         numData(t, 7),
+				"/1/oranges":        numData(t, 3),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+				"/2/apples":         numData(t, 14),
+				"/2/oranges":        numData(t, 10),
+			},
+			target:               "3",
+			expectedFinalVersion: "2",
+			expectedErr:          errors.New("running up migration: attempting to transform to new state '/oranges': could not migrate"),
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(addMigration, "2").OldVersion("1"),
+				versioned.NewVersionedBuilder(errorMigration, "3").OldVersion("2"),
+			},
+		},
+	}
+	for testCase, data := range testCases {
+		t.Run(testCase, func(t *testing.T) {
+			ds1 := datastore.NewMapDatastore()
+			if data.inputDatabase != nil {
+				for key, value := range data.inputDatabase {
+					err := ds1.Put(datastore.NewKey(key), value)
+					require.NoError(t, err)
+				}
+			}
+			migrations, err := data.migrationBuilders.Build()
+			require.NoError(t, err)
+			finalVersion, err := migrate.To(ds1, migrations, data.target)
+			require.Equal(t, data.expectedFinalVersion, finalVersion)
+			if data.expectedErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, data.expectedErr.Error())
+			}
+			outputDatabase := make(map[string][]byte)
+			res, err := ds1.Query(query.Query{})
+			require.NoError(t, err)
+			defer res.Close()
+			for {
+				res, ok := res.NextSync()
+				if !ok {
+					break
+				}
+				require.NoError(t, res.Error)
+				require.NoError(t, err)
+				outputDatabase[res.Key] = res.Value
+			}
+			require.Equal(t, data.expectedOutputDatabase, outputDatabase)
+		})
+	}
+}
+
+func versionData(versionKey versioning.VersionKey) []byte {
+	return []byte(versionKey)
+}
+
+func numData(t *testing.T, num int64) []byte {
+	buf := new(bytes.Buffer)
+	var value cbg.CborInt = cbg.CborInt(num)
+	err := value.MarshalCBOR(buf)
+	require.NoError(t, err)
+	return buf.Bytes()
 }

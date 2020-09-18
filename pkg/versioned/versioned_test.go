@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
+	"github.com/filecoin-project/go-ds-versioning/internal/utils"
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/filecoin-project/go-ds-versioning/pkg/builder"
 	"github.com/filecoin-project/go-ds-versioning/pkg/versioned"
@@ -79,6 +80,7 @@ func TestExecuteMigration(t *testing.T) {
 
 			batch, err := ds1.Batch()
 			require.NoError(t, err)
+			keys = utils.KeysForVersion(data.versionedMigration.OldVersion(), keys)
 			for _, key := range keys {
 				require.NoError(t, batch.Delete(key))
 			}
@@ -106,6 +108,7 @@ func TestExecuteMigration(t *testing.T) {
 
 			batch, err = ds1.Batch()
 			require.NoError(t, err)
+			keys = utils.KeysForVersion(data.versionedMigration.NewVersion(), keys)
 			for _, key := range keys {
 				require.NoError(t, batch.Delete(key))
 			}

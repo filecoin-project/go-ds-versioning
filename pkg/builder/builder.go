@@ -11,6 +11,13 @@ import (
 	"github.com/ipfs/go-datastore/query"
 )
 
+// Builder is an interface for constructing migrations
+type Builder interface {
+	Reversible(down versioning.MigrationFunc) Builder
+	FilterKeys([]string) Builder
+	Build() (versioning.DatastoreMigration, error)
+}
+
 type migrationBuilder struct {
 	oldType      reflect.Type
 	newType      reflect.Type
@@ -20,7 +27,7 @@ type migrationBuilder struct {
 	downFunc     reflect.Value
 }
 
-func (mb migrationBuilder) Reversible(down versioning.MigrationFunc) versioning.MigrationBuilder {
+func (mb migrationBuilder) Reversible(down versioning.MigrationFunc) Builder {
 	reversibleNewType, reversibleOldType, err := validate.CheckMigration(down)
 	if err != nil {
 		return errorBuilder{err}
@@ -31,7 +38,7 @@ func (mb migrationBuilder) Reversible(down versioning.MigrationFunc) versioning.
 	return migrationBuilder{mb.oldType, mb.newType, mb.upFunc, mb.filters, true, reflect.ValueOf(down)}
 }
 
-func (mb migrationBuilder) FilterKeys(keys []string) versioning.MigrationBuilder {
+func (mb migrationBuilder) FilterKeys(keys []string) Builder {
 	var newFilters = mb.filters
 	for _, key := range keys {
 		newFilters = append(newFilters, query.FilterKeyCompare{Key: key, Op: query.NotEqual})
@@ -59,9 +66,9 @@ type errorBuilder struct {
 	err error
 }
 
-func (eb errorBuilder) Reversible(versioning.MigrationFunc) versioning.MigrationBuilder { return eb }
-func (eb errorBuilder) FilterKeys([]string) versioning.MigrationBuilder                 { return eb }
-func (eb errorBuilder) Build() (versioning.DatastoreMigration, error)                   { return nil, eb.err }
+func (eb errorBuilder) Reversible(versioning.MigrationFunc) Builder   { return eb }
+func (eb errorBuilder) FilterKeys([]string) Builder                   { return eb }
+func (eb errorBuilder) Build() (versioning.DatastoreMigration, error) { return nil, eb.err }
 
 type dsMigration struct {
 	query   query.Query
@@ -71,7 +78,7 @@ type dsMigration struct {
 }
 
 func (dm *dsMigration) Up(oldDs datastore.Batching, newDS datastore.Batching) ([]datastore.Key, error) {
-	return migrate.ExecuteMigration(dm.query, oldDs, newDS, dm.oldType, dm.upFunc)
+	return migrate.Execute(dm.query, oldDs, newDS, dm.oldType, dm.upFunc)
 }
 
 type reversibleDsMigration struct {
@@ -80,11 +87,11 @@ type reversibleDsMigration struct {
 }
 
 func (rdm *reversibleDsMigration) Down(newDs datastore.Batching, oldDs datastore.Batching) ([]datastore.Key, error) {
-	return migrate.ExecuteMigration(rdm.query, newDs, oldDs, rdm.newType, rdm.downFunc)
+	return migrate.Execute(rdm.query, newDs, oldDs, rdm.newType, rdm.downFunc)
 }
 
 // NewMigrationBuilder returns an interface that can be used to build a data base migration
-func NewMigrationBuilder(up versioning.MigrationFunc) versioning.MigrationBuilder {
+func NewMigrationBuilder(up versioning.MigrationFunc) Builder {
 	oldType, newType, err := validate.CheckMigration(up)
 	if err != nil {
 		return errorBuilder{err}

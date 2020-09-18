@@ -11,12 +11,7 @@ type migrateFunc func(ds1 datastore.Batching, ds2 datastore.Batching) ([]datasto
 func versionMigrate(mf migrateFunc, ds datastore.Batching, from versioning.VersionKey, to versioning.VersionKey) ([]datastore.Key, error) {
 	ds1 := namespace.Wrap(ds, datastore.NewKey(string(from)))
 	ds2 := namespace.Wrap(ds, datastore.NewKey(string(to)))
-	keys, err := mf(ds1, ds2)
-	unwrapKeys := make([]datastore.Key, 0, len(keys))
-	for _, key := range keys {
-		unwrapKeys = append(unwrapKeys, datastore.NewKey(string(from)).Child(key))
-	}
-	return unwrapKeys, err
+	return mf(ds1, ds2)
 }
 
 type versionedMigration struct {
