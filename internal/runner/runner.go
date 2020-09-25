@@ -11,7 +11,7 @@ import (
 )
 
 // RunMigrationsFunc is a function that runs migrations
-type RunMigrationsFunc func(ds datastore.Batching, migrations versioning.VersionedMigrationList, target versioning.VersionKey) (versioning.VersionKey, error)
+type RunMigrationsFunc func(ctx context.Context, ds datastore.Batching, migrations versioning.VersionedMigrationList, target versioning.VersionKey) (versioning.VersionKey, error)
 
 // Runner executes a migrations exactly once
 // and can queried for status of that migration and any migration errors
@@ -41,7 +41,7 @@ func NewRunner(ds datastore.Batching, migrations versioning.VersionedMigrationLi
 func (m *Runner) Migrate(ctx context.Context) error {
 	go func() {
 		m.doMigration.Do(func() {
-			_, err := m.runMigrations(m.ds, m.migrations, m.target)
+			_, err := m.runMigrations(ctx, m.ds, m.migrations, m.target)
 			m.migrationError.Store(err)
 			m.ready.Store(true)
 			close(m.migrationsDone)

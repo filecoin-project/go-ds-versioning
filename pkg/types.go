@@ -1,6 +1,10 @@
 package versioning
 
-import "github.com/ipfs/go-datastore"
+import (
+	"context"
+
+	"github.com/ipfs/go-datastore"
+)
 
 // MigrationFunc is a function to transform an single element of one type of data into
 // a single element of another type of data. It has the following form:
@@ -11,13 +15,13 @@ type MigrationFunc interface{}
 // of one kind of structured data and write it to a table that is another kind of
 // structured data
 type DatastoreMigration interface {
-	Up(oldDs datastore.Batching, newDS datastore.Batching) ([]datastore.Key, error)
+	Up(ctx context.Context, oldDs datastore.Batching, newDS datastore.Batching) ([]datastore.Key, error)
 }
 
 // ReversableDatastoreMigration is
 type ReversableDatastoreMigration interface {
 	DatastoreMigration
-	Down(newDs datastore.Batching, oldDS datastore.Batching) ([]datastore.Key, error)
+	Down(ctx context.Context, newDs datastore.Batching, oldDS datastore.Batching) ([]datastore.Key, error)
 }
 
 // VersionKey is an identifier for a databased version
@@ -28,14 +32,14 @@ type VersionKey string
 type VersionedMigration interface {
 	OldVersion() VersionKey
 	NewVersion() VersionKey
-	Up(ds datastore.Batching) ([]datastore.Key, error)
+	Up(ctx context.Context, ds datastore.Batching) ([]datastore.Key, error)
 }
 
 // ReversibleVersionedMigration is a migration that migrates data in a single database
 // between versions, and can be reversed
 type ReversibleVersionedMigration interface {
 	VersionedMigration
-	Down(ds datastore.Batching) ([]datastore.Key, error)
+	Down(ctx context.Context, ds datastore.Batching) ([]datastore.Key, error)
 }
 
 // VersionedMigrationList is a sortable list of versioned migrations
