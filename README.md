@@ -34,7 +34,7 @@ the database. However, most commonly, we want to migrate one record type to anot
 
 **Requires go 1.14**
 
-Install the module in your package or app with `go get "github.com/filecoin-project/go-ds-versioning/datatransfer"`
+Install the module in your package or app with `go get "github.com/filecoin-project/go-ds-versioning"`
 
 ## Usage
 
