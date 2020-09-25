@@ -252,6 +252,23 @@ func TestTo(t *testing.T) {
 				versioned.NewVersionedBuilder(multiplyMigration, "2").Reversible(divideMigration).OldVersion("1"),
 			},
 		},
+		"already migrated": {
+			inputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+				"/2/apples":         numData(t, 56),
+				"/2/oranges":        numData(t, 40),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+				"/2/apples":         numData(t, 56),
+				"/2/oranges":        numData(t, 40),
+			},
+			target:               "2",
+			expectedFinalVersion: "2",
+			migrationBuilders: versioned.BuilderList{
+				versioned.NewVersionedBuilder(multiplyMigration, "2").Reversible(divideMigration).OldVersion("1"),
+			},
+		},
 		"incomplete migration": {
 			inputDatabase: map[string][]byte{
 				"/versions/current": versionData("1"),

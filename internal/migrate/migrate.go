@@ -168,6 +168,8 @@ func runMigrations(ds datastore.Batching, migrations versioning.VersionedMigrati
 				}
 			}
 		}
+	} else if target == current {
+		return current, nil
 	}
 	return current, errors.New("never reached target database version")
 }
