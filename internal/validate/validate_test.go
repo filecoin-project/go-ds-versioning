@@ -5,10 +5,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/filecoin-project/go-ds-versioning/internal/validate"
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/stretchr/testify/require"
 	cbg "github.com/whyrusleeping/cbor-gen"
+
+	"github.com/filecoin-project/go-ds-versioning/internal/validate"
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 )
 
 func TestCheckMigration(t *testing.T) {

@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/go-ds-versioning/internal/runner"
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/ipfs/go-datastore"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/atomic"
+
+	"github.com/filecoin-project/go-ds-versioning/internal/runner"
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 )
 
 func TestMigrate(t *testing.T) {

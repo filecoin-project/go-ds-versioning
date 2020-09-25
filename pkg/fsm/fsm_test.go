@@ -5,12 +5,14 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	cbg "github.com/whyrusleeping/cbor-gen"
+
+	"github.com/filecoin-project/go-statemachine/fsm"
+
 	"github.com/filecoin-project/go-ds-versioning/internal/utils"
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	versioned "github.com/filecoin-project/go-ds-versioning/pkg/fsm"
-	"github.com/filecoin-project/go-statemachine/fsm"
-	"github.com/stretchr/testify/require"
-	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
 func TestFSM(t *testing.T) {

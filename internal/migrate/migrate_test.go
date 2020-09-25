@@ -7,16 +7,18 @@ import (
 	"reflect"
 	"testing"
 
-	cborutil "github.com/filecoin-project/go-cbor-util"
-	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
-	"github.com/filecoin-project/go-ds-versioning/pkg/versioned"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	"github.com/stretchr/testify/require"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"go.uber.org/multierr"
 	"go4.org/sort"
+
+	cborutil "github.com/filecoin-project/go-cbor-util"
+
+	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
+	"github.com/filecoin-project/go-ds-versioning/pkg/versioned"
 )
 
 func TestExecuteMigration(t *testing.T) {

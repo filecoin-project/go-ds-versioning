@@ -1,11 +1,15 @@
+// Package versioned provides an interface for defining versioned
+// migrations -- migrations that move records from one versioned namespace to
+// another withing go datastore
 package versioned
 
 import (
 	"context"
 
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
+
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 )
 
 type migrateFunc func(ctx context.Context, ds1 datastore.Batching, ds2 datastore.Batching) ([]datastore.Key, error)

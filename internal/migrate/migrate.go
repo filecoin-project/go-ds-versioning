@@ -8,13 +8,15 @@ import (
 	"reflect"
 	"sort"
 
-	cborutil "github.com/filecoin-project/go-cbor-util"
-	"github.com/filecoin-project/go-ds-versioning/internal/utils"
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"go.uber.org/multierr"
+
+	cborutil "github.com/filecoin-project/go-cbor-util"
+
+	"github.com/filecoin-project/go-ds-versioning/internal/utils"
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 )
 
 // Execute executes a database migration from datastore to another, using the given migration function

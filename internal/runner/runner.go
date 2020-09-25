@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"sync"
 
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/ipfs/go-datastore"
 	"go.uber.org/atomic"
+
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 )
 
 // RunMigrationsFunc is a function that runs migrations

@@ -1,14 +1,18 @@
+// Package datastore provides an abstraction on top of go-datastore that allows
+// you to make a datastore that tracks its own version and knows how to
+// migrate itself to the target version
 package datastore
 
 import (
 	"context"
 
-	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
-	"github.com/filecoin-project/go-ds-versioning/internal/runner"
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	datastore "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	"github.com/ipfs/go-datastore/query"
+
+	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
+	"github.com/filecoin-project/go-ds-versioning/internal/runner"
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 )
 
 type migratedDatastore struct {
