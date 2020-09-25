@@ -56,3 +56,20 @@ func (vml VersionedMigrationList) Less(i int, j int) bool {
 func (vml VersionedMigrationList) Swap(i int, j int) {
 	vml[i], vml[j] = vml[j], vml[i]
 }
+
+// MigrationState is an interface that returns the current state of migrations being run
+type MigrationState interface {
+	ReadyError() error
+}
+
+type readyError string
+
+func (re readyError) Error() string {
+	return string(re)
+}
+
+// ErrMigrationsNotRun is run when ReadyError is called prior to running migrations
+const ErrMigrationsNotRun = readyError("Database not migrations must be run or are still running")
+
+// ErrContextCancelled means the context the migrations were run in was cancelled
+const ErrContextCancelled = readyError("context cancelled")
