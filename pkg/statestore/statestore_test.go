@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
-	versioned "github.com/filecoin-project/go-ds-versioning/pkg/statestore"
-	"github.com/filecoin-project/go-statestore"
 	"github.com/ipfs/go-datastore"
 	"github.com/stretchr/testify/require"
 	cbg "github.com/whyrusleeping/cbor-gen"
+
+	"github.com/filecoin-project/go-statestore"
+
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
+	versioned "github.com/filecoin-project/go-ds-versioning/pkg/statestore"
 )
 
 func TestStateStore(t *testing.T) {

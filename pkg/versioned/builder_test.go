@@ -4,11 +4,12 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	cbg "github.com/whyrusleeping/cbor-gen"
+
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/filecoin-project/go-ds-versioning/pkg/builder"
 	"github.com/filecoin-project/go-ds-versioning/pkg/versioned"
-	"github.com/stretchr/testify/require"
-	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
 func TestVersionedBuilderTest(t *testing.T) {

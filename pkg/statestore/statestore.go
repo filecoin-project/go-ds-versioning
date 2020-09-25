@@ -1,16 +1,21 @@
+// Package statestore provides an abstraction on top of go-statestore that allows
+// you to make a StateStore that tracks its own version and knows how to
+// migrate itself to the target version
 package statestore
 
 import (
 	"context"
 
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/namespace"
+	cbg "github.com/whyrusleeping/cbor-gen"
+
+	"github.com/filecoin-project/go-statestore"
+
 	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
 	"github.com/filecoin-project/go-ds-versioning/internal/runner"
 	"github.com/filecoin-project/go-ds-versioning/internal/utils"
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
-	"github.com/filecoin-project/go-statestore"
-	"github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/namespace"
-	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
 // StoredState is an interface for accessing state

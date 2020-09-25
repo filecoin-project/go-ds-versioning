@@ -1,16 +1,21 @@
+// Package fsm provides an abstraction on top of the fsm's defined by go-statemachine
+// that allows you to make a group of finite state machines that tracks
+// their own version and know how to migrate themselves to the target version
 package fsm
 
 import (
 	"context"
 
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/namespace"
+	cbg "github.com/whyrusleeping/cbor-gen"
+
+	"github.com/filecoin-project/go-statemachine/fsm"
+
 	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
 	"github.com/filecoin-project/go-ds-versioning/internal/runner"
 	"github.com/filecoin-project/go-ds-versioning/internal/utils"
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
-	"github.com/filecoin-project/go-statemachine/fsm"
-	"github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/namespace"
-	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
 type migratedFsm struct {

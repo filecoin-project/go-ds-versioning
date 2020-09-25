@@ -1,3 +1,5 @@
+// Package builder provides a low level interface for defining un-versioned
+// migrations based on a record transformation function
 package builder
 
 import (
@@ -5,11 +7,12 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/query"
+
 	"github.com/filecoin-project/go-ds-versioning/internal/migrate"
 	"github.com/filecoin-project/go-ds-versioning/internal/validate"
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
-	"github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/query"
 )
 
 // Builder is an interface for constructing migrations

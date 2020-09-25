@@ -1,3 +1,4 @@
+// Package versioning defines top level types for go-ds-versioning
 package versioning
 
 import (

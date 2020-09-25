@@ -3,10 +3,11 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/filecoin-project/go-ds-versioning/internal/utils"
-	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/ipfs/go-datastore"
 	"github.com/stretchr/testify/require"
+
+	"github.com/filecoin-project/go-ds-versioning/internal/utils"
+	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 )
 
 func TestKeysForVersion(t *testing.T) {

@@ -1,9 +1,10 @@
 package versioned
 
 import (
+	"go.uber.org/multierr"
+
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/filecoin-project/go-ds-versioning/pkg/builder"
-	"go.uber.org/multierr"
 )
 
 // Builder is just a versioned version of the migration builder
