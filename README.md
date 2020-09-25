@@ -21,7 +21,7 @@ This module provides building blocks for migrating key-value datastores that mat
 ## Background
 
 In the Filecoin ecosystem, we maintain a number of key-value datastores that
-track the off-chain states fo various components of Filecoin. As the protocol evolves, we will need to migrate these datastores. The Filecoin protocol requires nodes on the network maintain near constant uptime in order to meet proving requirements. We'd like to be able to migrate off-chain states while taking down only the components of the node that use these states.
+track the off-chain states of various components of Filecoin. As the protocol evolves, we will need to migrate these datastores. The Filecoin protocol requires nodes on the network maintain near constant uptime in order to meet proving requirements. We'd like to be able to migrate off-chain states while taking down only the components of the node that use these states.
 
 This library provides two core components:
 
