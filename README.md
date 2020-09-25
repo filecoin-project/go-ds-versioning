@@ -149,7 +149,7 @@ var migrations versioning.VersionedMigrationList // the migrations we setup prev
 fruitBaskets, migrateFruitBaskets := statestore.NewVersionedStateStore(ds, migrations, versioning.VersionKey("1"))
 ```
 
-Here we're setting up a migrated statestore using the datastore, a list of migrations, and a target version. (target cause in certain cases we want to support migrated DOWN).
+Here we're setting up a migrated statestore using the datastore, a list of migrations, and a target version. (target cause in certain cases we want to migrate to a particular version, either UP or DOWN).
 
 We get back our statestore, and a function to run migrations so we're at our target version.
 
