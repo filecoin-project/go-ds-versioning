@@ -7,6 +7,7 @@ import (
 	"github.com/filecoin-project/go-ds-versioning/internal/runner"
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	datastore "github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/namespace"
 	"github.com/ipfs/go-datastore/query"
 )
 
@@ -19,7 +20,7 @@ type migratedDatastore struct {
 // a datastore whose functions will fail till it's migrated to the target version and a function to run migrations
 func NewVersionedDatastore(ds datastore.Batching, migrations versioning.VersionedMigrationList, target versioning.VersionKey) (datastore.Batching, func(context.Context) error) {
 	r := runner.NewRunner(ds, migrations, target, migrate.To)
-	return NewMigratedDatastore(ds, r), r.Migrate
+	return NewMigratedDatastore(namespace.Wrap(ds, datastore.NewKey(string(target))), r), r.Migrate
 }
 
 // NewMigratedDatastore returns a datastore whose functions will fail until the migration state says its ready
