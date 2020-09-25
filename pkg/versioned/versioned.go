@@ -1,17 +1,19 @@
 package versioned
 
 import (
+	"context"
+
 	versioning "github.com/filecoin-project/go-ds-versioning/pkg"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 )
 
-type migrateFunc func(ds1 datastore.Batching, ds2 datastore.Batching) ([]datastore.Key, error)
+type migrateFunc func(ctx context.Context, ds1 datastore.Batching, ds2 datastore.Batching) ([]datastore.Key, error)
 
-func versionMigrate(mf migrateFunc, ds datastore.Batching, from versioning.VersionKey, to versioning.VersionKey) ([]datastore.Key, error) {
+func versionMigrate(ctx context.Context, mf migrateFunc, ds datastore.Batching, from versioning.VersionKey, to versioning.VersionKey) ([]datastore.Key, error) {
 	ds1 := namespace.Wrap(ds, datastore.NewKey(string(from)))
 	ds2 := namespace.Wrap(ds, datastore.NewKey(string(to)))
-	return mf(ds1, ds2)
+	return mf(ctx, ds1, ds2)
 }
 
 type versionedMigration struct {
@@ -28,16 +30,16 @@ func (vm versionedMigration) NewVersion() versioning.VersionKey {
 	return vm.newKey
 }
 
-func (vm versionedMigration) Up(ds datastore.Batching) ([]datastore.Key, error) {
-	return versionMigrate(vm.migration.Up, ds, vm.oldKey, vm.newKey)
+func (vm versionedMigration) Up(ctx context.Context, ds datastore.Batching) ([]datastore.Key, error) {
+	return versionMigrate(ctx, vm.migration.Up, ds, vm.oldKey, vm.newKey)
 }
 
 type reversibleVersionedMigration struct {
 	versionedMigration
 }
 
-func (rvm reversibleVersionedMigration) Down(ds datastore.Batching) ([]datastore.Key, error) {
-	return versionMigrate(rvm.migration.(versioning.ReversableDatastoreMigration).Down, ds, rvm.newKey, rvm.oldKey)
+func (rvm reversibleVersionedMigration) Down(ctx context.Context, ds datastore.Batching) ([]datastore.Key, error) {
+	return versionMigrate(ctx, rvm.migration.(versioning.ReversableDatastoreMigration).Down, ds, rvm.newKey, rvm.oldKey)
 }
 
 // NewVersionedMigration converts a datastore migration to a versioned migration with the given old and new versions

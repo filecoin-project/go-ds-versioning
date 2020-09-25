@@ -33,7 +33,7 @@ func TestMigrate(t *testing.T) {
 			},
 			getRunMigrations: func(param interface{}) runner.RunMigrationsFunc {
 				count := param.(*atomic.Uint64)
-				return func(datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
+				return func(context.Context, datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
 					count.Inc()
 					return versioning.VersionKey(""), nil
 				}
@@ -49,7 +49,7 @@ func TestMigrate(t *testing.T) {
 				assert.EqualError(t, r.ReadyError(), versioning.ErrMigrationsNotRun.Error())
 			},
 			getRunMigrations: func(param interface{}) runner.RunMigrationsFunc {
-				return func(datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
+				return func(context.Context, datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
 					return versioning.VersionKey(""), nil
 				}
 			},
@@ -63,7 +63,7 @@ func TestMigrate(t *testing.T) {
 				assert.EqualError(t, r.ReadyError(), versioning.ErrMigrationsNotRun.Error())
 			},
 			getRunMigrations: func(param interface{}) runner.RunMigrationsFunc {
-				return func(datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
+				return func(context.Context, datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
 					return versioning.VersionKey(""), errors.New("something went wrong")
 				}
 			},
@@ -82,7 +82,7 @@ func TestMigrate(t *testing.T) {
 			},
 			getRunMigrations: func(param interface{}) runner.RunMigrationsFunc {
 				blocker := param.(chan struct{})
-				return func(datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
+				return func(context.Context, datastore.Batching, versioning.VersionedMigrationList, versioning.VersionKey) (versioning.VersionKey, error) {
 					<-blocker
 					return versioning.VersionKey(""), nil
 				}

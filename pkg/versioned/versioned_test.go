@@ -2,6 +2,7 @@ package versioned_test
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
@@ -16,6 +17,7 @@ import (
 )
 
 func TestExecuteMigration(t *testing.T) {
+	ctx := context.Background()
 	var appleCount = cbg.CborInt(30)
 	var orangeCount = cbg.CborInt(0)
 	var changedAppleCount = cbg.CborInt(37)
@@ -75,7 +77,7 @@ func TestExecuteMigration(t *testing.T) {
 				}
 			}
 
-			keys, err := data.versionedMigration.Up(ds1)
+			keys, err := data.versionedMigration.Up(ctx, ds1)
 			require.NoError(t, err)
 
 			batch, err := ds1.Batch()
@@ -103,7 +105,7 @@ func TestExecuteMigration(t *testing.T) {
 			}
 			require.Equal(t, data.expectedOutputDatabase, outputDatabase)
 
-			keys, err = data.versionedMigration.Down(ds1)
+			keys, err = data.versionedMigration.Down(ctx, ds1)
 			require.NoError(t, err)
 
 			batch, err = ds1.Batch()

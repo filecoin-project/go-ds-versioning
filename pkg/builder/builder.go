@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"errors"
 	"reflect"
 
@@ -77,8 +78,8 @@ type dsMigration struct {
 	upFunc  reflect.Value
 }
 
-func (dm *dsMigration) Up(oldDs datastore.Batching, newDS datastore.Batching) ([]datastore.Key, error) {
-	return migrate.Execute(dm.query, oldDs, newDS, dm.oldType, dm.upFunc)
+func (dm *dsMigration) Up(ctx context.Context, oldDs datastore.Batching, newDS datastore.Batching) ([]datastore.Key, error) {
+	return migrate.Execute(ctx, dm.query, oldDs, newDS, dm.oldType, dm.upFunc)
 }
 
 type reversibleDsMigration struct {
@@ -86,8 +87,8 @@ type reversibleDsMigration struct {
 	downFunc reflect.Value
 }
 
-func (rdm *reversibleDsMigration) Down(newDs datastore.Batching, oldDs datastore.Batching) ([]datastore.Key, error) {
-	return migrate.Execute(rdm.query, newDs, oldDs, rdm.newType, rdm.downFunc)
+func (rdm *reversibleDsMigration) Down(ctx context.Context, newDs datastore.Batching, oldDs datastore.Batching) ([]datastore.Key, error) {
+	return migrate.Execute(ctx, rdm.query, newDs, oldDs, rdm.newType, rdm.downFunc)
 }
 
 // NewMigrationBuilder returns an interface that can be used to build a data base migration

@@ -2,6 +2,7 @@ package migrate_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -23,12 +24,27 @@ func TestExecuteMigration(t *testing.T) {
 	var orangeCount = cbg.CborInt(0)
 	var untransformableCount = cbg.CborInt(42)
 	var origBool = cbg.CborBool(true)
+	ctx := context.Background()
+	transform := func(c *cbg.CborInt) (*cbg.CborBool, error) {
+		var out cbg.CborBool
+		if *c != 0 {
+			out = true
+		}
+		if *c == 42 {
+			return nil, errors.New("the meaning of life is untransformable")
+		}
+		return &out, nil
+	}
+	transformValue := reflect.ValueOf(transform)
+	oldType := reflect.TypeOf(new(cbg.CborInt))
+
 	testCases := map[string]struct {
 		inputDatabase          map[string]cbg.CBORMarshaler
 		expectedOutputDatabase map[string]cbg.CborBool
 		preloadOutputs         map[string]cbg.CborBool
 		expectedKeys           []datastore.Key
 		expectedErrs           []error
+		execute                func(ctx context.Context, ds1 datastore.Batching, ds2 datastore.Batching) ([]datastore.Key, error)
 	}{
 		"it works": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -82,19 +98,40 @@ func TestExecuteMigration(t *testing.T) {
 			expectedErrs: []error{errors.New("already tracking state in new db for '/apples'")},
 			expectedKeys: []datastore.Key{datastore.NewKey("/oranges")},
 		},
+		"context cancelled": {
+			inputDatabase: map[string]cbg.CBORMarshaler{
+				"/apples":  &appleCount,
+				"/oranges": &orangeCount,
+			},
+			expectedOutputDatabase: map[string]cbg.CborBool{
+				"/apples": true,
+			},
+			expectedKeys: []datastore.Key{datastore.NewKey("/apples")},
+			expectedErrs: []error{versioning.ErrContextCancelled},
+			execute: func(ctx context.Context, ds1 datastore.Batching, ds2 datastore.Batching) ([]datastore.Key, error) {
+				closing := make(chan struct{})
+				closed := make(chan struct{})
+				ctx, cancel := context.WithCancel(ctx)
+				transformWithCancel := func(c *cbg.CborInt) (*cbg.CborBool, error) {
+					out, err := transform(c)
+					select {
+					case <-closed:
+					default:
+						close(closing)
+					}
+					<-closed
+					return out, err
+				}
+				go func() {
+					<-closing
+					cancel()
+					close(closed)
+				}()
+				transformWithCancelValue := reflect.ValueOf(transformWithCancel)
+				return migrate.Execute(ctx, query.Query{}, ds1, ds2, oldType, transformWithCancelValue)
+			},
+		},
 	}
-	transform := func(c *cbg.CborInt) (*cbg.CborBool, error) {
-		var out cbg.CborBool
-		if *c != 0 {
-			out = true
-		}
-		if *c == 42 {
-			return nil, errors.New("the meaning of life is untransformable")
-		}
-		return &out, nil
-	}
-	transformValue := reflect.ValueOf(transform)
-	oldType := reflect.TypeOf(new(cbg.CborInt))
 	for testCase, data := range testCases {
 		t.Run(testCase, func(t *testing.T) {
 			ds1 := datastore.NewMapDatastore()
@@ -117,7 +154,13 @@ func TestExecuteMigration(t *testing.T) {
 					require.NoError(t, err)
 				}
 			}
-			migrated, err := migrate.Execute(query.Query{}, ds1, ds2, oldType, transformValue)
+			var migrated []datastore.Key
+			var err error
+			if data.execute == nil {
+				migrated, err = migrate.Execute(ctx, query.Query{}, ds1, ds2, oldType, transformValue)
+			} else {
+				migrated, err = data.execute(ctx, ds1, ds2)
+			}
 			errs := multierr.Errors(err)
 			require.Equal(t, len(data.expectedErrs), len(errs))
 			for i, err := range errs {
@@ -147,6 +190,7 @@ func TestExecuteMigration(t *testing.T) {
 }
 
 func TestTo(t *testing.T) {
+	ctx := context.Background()
 	addMigration := func(c *cbg.CborInt) (*cbg.CborInt, error) {
 		newCount := *c + 7
 		return &newCount, nil
@@ -354,7 +398,7 @@ func TestTo(t *testing.T) {
 			}
 			migrations, err := data.migrationBuilders.Build()
 			require.NoError(t, err)
-			finalVersion, err := migrate.To(ds1, migrations, data.target)
+			finalVersion, err := migrate.To(ctx, ds1, migrations, data.target)
 			require.Equal(t, data.expectedFinalVersion, finalVersion)
 			if data.expectedErr == nil {
 				require.NoError(t, err)

@@ -2,6 +2,7 @@ package builder_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 )
 
 func TestExecuteMigration(t *testing.T) {
+	ctx := context.Background()
 	var appleCount = cbg.CborInt(30)
 	var orangeCount = cbg.CborInt(0)
 	var changedAppleCount = cbg.CborInt(37)
@@ -114,7 +116,7 @@ func TestExecuteMigration(t *testing.T) {
 			if data.expectedErr == nil {
 				require.NoError(t, err)
 
-				_, err = migration.Up(ds1, ds2)
+				_, err = migration.Up(ctx, ds1, ds2)
 				require.NoError(t, err)
 
 				outputDatabase := make(map[string]*cbg.CborInt)
@@ -137,7 +139,7 @@ func TestExecuteMigration(t *testing.T) {
 				reversible, ok := migration.(versioning.ReversableDatastoreMigration)
 				if ok {
 					ds3 := datastore.NewMapDatastore()
-					_, err = reversible.Down(ds2, ds3)
+					_, err = reversible.Down(ctx, ds2, ds3)
 					require.NoError(t, err)
 
 					reversedDatabase := make(map[string]*cbg.CborInt)

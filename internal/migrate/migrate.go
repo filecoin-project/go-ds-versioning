@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -17,7 +18,7 @@ import (
 )
 
 // Execute executes a database migration from datastore to another, using the given migration function
-func Execute(q query.Query, oldDs datastore.Batching, newDS datastore.Batching, oldType reflect.Type, migrateFunc reflect.Value) ([]datastore.Key, error) {
+func Execute(ctx context.Context, q query.Query, oldDs datastore.Batching, newDS datastore.Batching, oldType reflect.Type, migrateFunc reflect.Value) ([]datastore.Key, error) {
 	qres, err := oldDs.Query(q)
 	if err != nil {
 		return nil, err
@@ -29,7 +30,7 @@ func Execute(q query.Query, oldDs datastore.Batching, newDS datastore.Batching, 
 		return nil, fmt.Errorf("batch error: %w", err)
 	}
 
-	keys, errs := execute(qres, oldDs, newDS, oldType, migrateFunc, batch)
+	keys, errs := execute(ctx, qres, oldDs, newDS, oldType, migrateFunc, batch)
 	err = batch.Commit()
 	if err != nil {
 		return nil, fmt.Errorf("committing: %w", err)
@@ -38,14 +39,19 @@ func Execute(q query.Query, oldDs datastore.Batching, newDS datastore.Batching, 
 	return keys, errs
 }
 
-func execute(qres query.Results, oldDs, newDS datastore.Batching, oldType reflect.Type, migrateFunc reflect.Value, batch datastore.Batch) (keys []datastore.Key, errs error) {
+func execute(ctx context.Context, qres query.Results, oldDs, newDS datastore.Batching, oldType reflect.Type, migrateFunc reflect.Value, batch datastore.Batch) (keys []datastore.Key, errs error) {
 
 	for res := range qres.Next() {
+		select {
+		case <-ctx.Done():
+			errs = versioning.ErrContextCancelled
+			return
+		default:
+		}
 		if res.Error != nil {
 			errs = res.Error
 			return
 		}
-
 		oldElem := reflect.New(oldType.Elem())
 		err := cborutil.ReadCborRPC(bytes.NewReader(res.Value), oldElem.Interface())
 		if err != nil {
@@ -88,7 +94,7 @@ var versioningKey = datastore.NewKey("/versions/current")
 // To attempts to migrate the database to the target version, reading from current version from the predefined key
 // and applying migrations as need to reach the target version
 // it returns the final database version (ideally = target) and any errors encountered
-func To(ds datastore.Batching, migrations versioning.VersionedMigrationList, to versioning.VersionKey) (versioning.VersionKey, error) {
+func To(ctx context.Context, ds datastore.Batching, migrations versioning.VersionedMigrationList, to versioning.VersionKey) (versioning.VersionKey, error) {
 	sort.Sort(migrations)
 	if !verifyIntegrity(migrations) {
 		return versioning.VersionKey(""), fmt.Errorf("migrations list must be contiguous")
@@ -117,7 +123,7 @@ func To(ds datastore.Batching, migrations versioning.VersionedMigrationList, to 
 	}
 
 	currentVersion := versioning.VersionKey(verBytes)
-	final, err := runMigrations(ds, migrations, currentVersion, to)
+	final, err := runMigrations(ctx, ds, migrations, currentVersion, to)
 	ferr := ds.Put(versioningKey, []byte(final))
 	if err != nil {
 		return final, err
@@ -125,11 +131,11 @@ func To(ds datastore.Batching, migrations versioning.VersionedMigrationList, to 
 	return final, ferr
 }
 
-func runMigrations(ds datastore.Batching, migrations versioning.VersionedMigrationList, current versioning.VersionKey, target versioning.VersionKey) (versioning.VersionKey, error) {
+func runMigrations(ctx context.Context, ds datastore.Batching, migrations versioning.VersionedMigrationList, current versioning.VersionKey, target versioning.VersionKey) (versioning.VersionKey, error) {
 	if target > current {
 		for _, migration := range migrations {
 			if migration.OldVersion() == current {
-				keys, err := migration.Up(ds)
+				keys, err := migration.Up(ctx, ds)
 				if err != nil {
 					versionedKeys := utils.KeysForVersion(migration.NewVersion(), keys)
 					_ = deleteKeys(ds, versionedKeys)
@@ -151,7 +157,7 @@ func runMigrations(ds datastore.Batching, migrations versioning.VersionedMigrati
 		for _, migration := range migrations {
 			reversible, ok := migration.(versioning.ReversibleVersionedMigration)
 			if ok && reversible.NewVersion() == current {
-				keys, err := reversible.Down(ds)
+				keys, err := reversible.Down(ctx, ds)
 				if err != nil {
 					versionedKeys := utils.KeysForVersion(migration.OldVersion(), keys)
 					_ = deleteKeys(ds, versionedKeys)
