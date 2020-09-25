@@ -114,7 +114,7 @@ builder := builder.FilterKeys("rotten-fruit-basket")
 
 We're assuming we'll probably define all our migrations in one place, so we make a `BuilderList` -- a list of migration definitions assembled using our builder interface. Typically you can just put your builders inline in the BuilderList.
 
-Finally, to turn these into actual migrations, we call `.Build()` on the `BuilderList` -- this will that our migrations are valid. In particular, every migration function must have the form:
+Finally, to turn these into actual migrations, we call `.Build()` on the `BuilderList` -- this will ensure that our migrations are valid. In particular, every migration function must have the form:
 
 ```golang
 func <T extends cbg.CBORUnmarshaller, U extends cbg.CBORMarshaller>(old T) (new U, error)
