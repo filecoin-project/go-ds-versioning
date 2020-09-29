@@ -79,6 +79,19 @@ func TestExecuteMigration(t *testing.T) {
 				return builder.FilterKeys([]string{"/oranges"})
 			},
 		},
+		"with specific keys": {
+			inputDatabase: map[string]*cbg.CborInt{
+				"/apples":  &appleCount,
+				"/oranges": &orangeCount,
+			},
+			expectedOutputDatabase: map[string]*cbg.CborInt{
+				"/apples": &changedAppleCount,
+			},
+			upFunc: migrateFunc,
+			configure: func(builder builder.Builder) builder.Builder {
+				return builder.Only([]string{"/apples"})
+			},
+		},
 		"down migration doesn't map up ": {
 			inputDatabase: map[string]*cbg.CborInt{
 				"/apples":  &appleCount,

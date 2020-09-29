@@ -19,6 +19,7 @@ import (
 type Builder interface {
 	Reversible(down versioning.MigrationFunc) Builder
 	FilterKeys([]string) Builder
+	Only([]string) Builder
 	Build() (versioning.DatastoreMigration, error)
 }
 
@@ -50,6 +51,14 @@ func (mb migrationBuilder) FilterKeys(keys []string) Builder {
 	return migrationBuilder{mb.oldType, mb.newType, mb.upFunc, newFilters, mb.isReversible, mb.downFunc}
 }
 
+func (mb migrationBuilder) Only(keys []string) Builder {
+	var newFilters = mb.filters
+	for _, key := range keys {
+		newFilters = append(newFilters, query.FilterKeyCompare{Key: key, Op: query.Equal})
+	}
+	return migrationBuilder{mb.oldType, mb.newType, mb.upFunc, newFilters, mb.isReversible, mb.downFunc}
+}
+
 func (mb migrationBuilder) Build() (versioning.DatastoreMigration, error) {
 	baseMigration := dsMigration{
 		query:   query.Query{Filters: mb.filters},
@@ -72,6 +81,7 @@ type errorBuilder struct {
 
 func (eb errorBuilder) Reversible(versioning.MigrationFunc) Builder   { return eb }
 func (eb errorBuilder) FilterKeys([]string) Builder                   { return eb }
+func (eb errorBuilder) Only([]string) Builder                         { return eb }
 func (eb errorBuilder) Build() (versioning.DatastoreMigration, error) { return nil, eb.err }
 
 type dsMigration struct {

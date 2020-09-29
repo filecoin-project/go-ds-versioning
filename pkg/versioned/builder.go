@@ -11,6 +11,7 @@ import (
 type Builder interface {
 	Reversible(down versioning.MigrationFunc) Builder
 	FilterKeys([]string) Builder
+	Only([]string) Builder
 	OldVersion(versioning.VersionKey) Builder
 	Build() (versioning.VersionedMigration, error)
 }
@@ -32,6 +33,10 @@ func (vb versionedBuilder) Reversible(down versioning.MigrationFunc) Builder {
 
 func (vb versionedBuilder) FilterKeys(keys []string) Builder {
 	return versionedBuilder{vb.base.FilterKeys(keys), vb.newVersion, vb.oldVersion}
+}
+
+func (vb versionedBuilder) Only(keys []string) Builder {
+	return versionedBuilder{vb.base.Only(keys), vb.newVersion, vb.oldVersion}
 }
 
 func (vb versionedBuilder) OldVersion(oldVersion versioning.VersionKey) Builder {
