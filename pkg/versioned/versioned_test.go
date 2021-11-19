@@ -74,7 +74,7 @@ func TestExecuteMigration(t *testing.T) {
 					buf := new(bytes.Buffer)
 					err := value.MarshalCBOR(buf)
 					require.NoError(t, err)
-					err = ds1.Put(datastore.NewKey(key), buf.Bytes())
+					err = ds1.Put(ctx, datastore.NewKey(key), buf.Bytes())
 					require.NoError(t, err)
 				}
 			}
@@ -82,16 +82,16 @@ func TestExecuteMigration(t *testing.T) {
 			keys, err := data.versionedMigration.Up(ctx, ds1)
 			require.NoError(t, err)
 
-			batch, err := ds1.Batch()
+			batch, err := ds1.Batch(ctx)
 			require.NoError(t, err)
 			keys = utils.KeysForVersion(data.versionedMigration.OldVersion(), keys)
 			for _, key := range keys {
-				require.NoError(t, batch.Delete(key))
+				require.NoError(t, batch.Delete(ctx, key))
 			}
-			require.NoError(t, batch.Commit())
+			require.NoError(t, batch.Commit(ctx))
 
 			outputDatabase := make(map[string]*cbg.CborInt)
-			res, err := ds1.Query(query.Query{})
+			res, err := ds1.Query(ctx, query.Query{})
 			require.NoError(t, err)
 			defer res.Close()
 			for {
@@ -110,16 +110,16 @@ func TestExecuteMigration(t *testing.T) {
 			keys, err = data.versionedMigration.Down(ctx, ds1)
 			require.NoError(t, err)
 
-			batch, err = ds1.Batch()
+			batch, err = ds1.Batch(ctx)
 			require.NoError(t, err)
 			keys = utils.KeysForVersion(data.versionedMigration.NewVersion(), keys)
 			for _, key := range keys {
-				require.NoError(t, batch.Delete(key))
+				require.NoError(t, batch.Delete(ctx, key))
 			}
-			require.NoError(t, batch.Commit())
+			require.NoError(t, batch.Commit(ctx))
 
 			reversedDatabase := make(map[string]*cbg.CborInt)
-			res, err = ds1.Query(query.Query{})
+			res, err = ds1.Query(ctx, query.Query{})
 			require.NoError(t, err)
 			defer res.Close()
 			for {

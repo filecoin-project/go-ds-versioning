@@ -32,53 +32,53 @@ func NewMigratedDatastore(ds datastore.Batching, ms versioning.MigrationState) d
 	return &migratedDatastore{ds, ms}
 }
 
-func (ds *migratedDatastore) Get(key datastore.Key) (value []byte, err error) {
+func (ds *migratedDatastore) Get(ctx context.Context, key datastore.Key) (value []byte, err error) {
 	if err := ds.ms.ReadyError(); err != nil {
 		return nil, err
 	}
-	return ds.ds.Get(key)
+	return ds.ds.Get(ctx, key)
 }
 
-func (ds *migratedDatastore) Has(key datastore.Key) (exists bool, err error) {
+func (ds *migratedDatastore) Has(ctx context.Context, key datastore.Key) (exists bool, err error) {
 	if err := ds.ms.ReadyError(); err != nil {
 		return false, err
 	}
-	return ds.ds.Has(key)
+	return ds.ds.Has(ctx, key)
 }
 
-func (ds *migratedDatastore) GetSize(key datastore.Key) (size int, err error) {
+func (ds *migratedDatastore) GetSize(ctx context.Context, key datastore.Key) (size int, err error) {
 	if err := ds.ms.ReadyError(); err != nil {
 		return 0, err
 	}
-	return ds.ds.GetSize(key)
+	return ds.ds.GetSize(ctx, key)
 }
 
-func (ds *migratedDatastore) Query(q query.Query) (query.Results, error) {
+func (ds *migratedDatastore) Query(ctx context.Context, q query.Query) (query.Results, error) {
 	if err := ds.ms.ReadyError(); err != nil {
 		return nil, err
 	}
-	return ds.ds.Query(q)
+	return ds.ds.Query(ctx, q)
 }
 
-func (ds *migratedDatastore) Put(key datastore.Key, value []byte) error {
+func (ds *migratedDatastore) Put(ctx context.Context, key datastore.Key, value []byte) error {
 	if err := ds.ms.ReadyError(); err != nil {
 		return err
 	}
-	return ds.ds.Put(key, value)
+	return ds.ds.Put(ctx, key, value)
 }
 
-func (ds *migratedDatastore) Delete(key datastore.Key) error {
+func (ds *migratedDatastore) Delete(ctx context.Context, key datastore.Key) error {
 	if err := ds.ms.ReadyError(); err != nil {
 		return err
 	}
-	return ds.ds.Delete(key)
+	return ds.ds.Delete(ctx, key)
 }
 
-func (ds *migratedDatastore) Sync(prefix datastore.Key) error {
+func (ds *migratedDatastore) Sync(ctx context.Context, prefix datastore.Key) error {
 	if err := ds.ms.ReadyError(); err != nil {
 		return err
 	}
-	return ds.ds.Sync(prefix)
+	return ds.ds.Sync(ctx, prefix)
 }
 
 func (ds *migratedDatastore) Close() error {
@@ -88,11 +88,11 @@ func (ds *migratedDatastore) Close() error {
 	return ds.ds.Close()
 }
 
-func (ds *migratedDatastore) Batch() (datastore.Batch, error) {
+func (ds *migratedDatastore) Batch(ctx context.Context) (datastore.Batch, error) {
 	if err := ds.ms.ReadyError(); err != nil {
 		return nil, err
 	}
-	return ds.ds.Batch()
+	return ds.ds.Batch(ctx)
 }
 
 var _ datastore.Batching = &migratedDatastore{}

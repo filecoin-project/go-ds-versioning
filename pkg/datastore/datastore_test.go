@@ -2,6 +2,7 @@ package datastore_test
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	datastore "github.com/ipfs/go-datastore"
@@ -14,6 +15,7 @@ import (
 )
 
 func TestDatastore(t *testing.T) {
+	ctx := context.TODO()
 	testCases := map[string]struct {
 		migrationErr  error
 		inputDatabase map[string]cbg.CBORMarshaler
@@ -25,7 +27,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				val, err := ds.Get(datastore.NewKey("/apples"))
+				val, err := ds.Get(ctx, datastore.NewKey("/apples"))
 				require.Nil(t, val)
 				require.EqualError(t, err, versioning.ErrMigrationsNotRun.Error())
 			},
@@ -35,7 +37,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				val, err := ds.Get(datastore.NewKey("/apples"))
+				val, err := ds.Get(ctx, datastore.NewKey("/apples"))
 				checkInt(t, val, 54)
 				require.NoError(t, err)
 			},
@@ -43,15 +45,15 @@ func TestDatastore(t *testing.T) {
 		"Put, not ready": {
 			migrationErr: versioning.ErrMigrationsNotRun,
 			test: func(t *testing.T, ds datastore.Batching) {
-				err := ds.Put(datastore.NewKey("/apples"), toBytes(t, newInt(54)))
+				err := ds.Put(ctx, datastore.NewKey("/apples"), toBytes(t, newInt(54)))
 				require.EqualError(t, err, versioning.ErrMigrationsNotRun.Error())
 			},
 		},
 		"Put, ready": {
 			test: func(t *testing.T, ds datastore.Batching) {
-				err := ds.Put(datastore.NewKey("/apples"), toBytes(t, newInt(54)))
+				err := ds.Put(ctx, datastore.NewKey("/apples"), toBytes(t, newInt(54)))
 				require.NoError(t, err)
-				val, err := ds.Get(datastore.NewKey("/apples"))
+				val, err := ds.Get(ctx, datastore.NewKey("/apples"))
 				checkInt(t, val, 54)
 				require.NoError(t, err)
 			},
@@ -62,7 +64,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				has, err := ds.Has(datastore.NewKey("/apples"))
+				has, err := ds.Has(ctx, datastore.NewKey("/apples"))
 				require.False(t, has)
 				require.EqualError(t, err, versioning.ErrMigrationsNotRun.Error())
 			},
@@ -72,7 +74,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				has, err := ds.Has(datastore.NewKey("/apples"))
+				has, err := ds.Has(ctx, datastore.NewKey("/apples"))
 				require.True(t, has)
 				require.NoError(t, err)
 			},
@@ -83,7 +85,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				size, err := ds.GetSize(datastore.NewKey("/apples"))
+				size, err := ds.GetSize(ctx, datastore.NewKey("/apples"))
 				require.Zero(t, size)
 				require.EqualError(t, err, versioning.ErrMigrationsNotRun.Error())
 			},
@@ -93,7 +95,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				size, err := ds.GetSize(datastore.NewKey("/apples"))
+				size, err := ds.GetSize(ctx, datastore.NewKey("/apples"))
 				require.Equal(t, len(toBytes(t, newInt(54))), size)
 				require.NoError(t, err)
 			},
@@ -104,7 +106,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				results, err := ds.Query(query.Query{})
+				results, err := ds.Query(ctx, query.Query{})
 				require.Nil(t, results)
 				require.EqualError(t, err, versioning.ErrMigrationsNotRun.Error())
 			},
@@ -114,7 +116,7 @@ func TestDatastore(t *testing.T) {
 				"/apples": newInt(54),
 			},
 			test: func(t *testing.T, ds datastore.Batching) {
-				results, err := ds.Query(query.Query{})
+				results, err := ds.Query(ctx, query.Query{})
 				require.NoError(t, err)
 				rest, err := results.Rest()
 				require.NoError(t, err)
@@ -137,14 +139,14 @@ func TestDatastore(t *testing.T) {
 		"Batch, not ready": {
 			migrationErr: versioning.ErrMigrationsNotRun,
 			test: func(t *testing.T, ds datastore.Batching) {
-				batch, err := ds.Batch()
+				batch, err := ds.Batch(ctx)
 				require.Nil(t, batch)
 				require.EqualError(t, err, versioning.ErrMigrationsNotRun.Error())
 			},
 		},
 		"Batch, ready": {
 			test: func(t *testing.T, ds datastore.Batching) {
-				batch, err := ds.Batch()
+				batch, err := ds.Batch(ctx)
 				require.NotNil(t, batch)
 				require.NoError(t, err)
 			},
@@ -158,7 +160,7 @@ func TestDatastore(t *testing.T) {
 					buf := new(bytes.Buffer)
 					err := value.MarshalCBOR(buf)
 					require.NoError(t, err)
-					err = ds.Put(datastore.NewKey(key), buf.Bytes())
+					err = ds.Put(ctx, datastore.NewKey(key), buf.Bytes())
 					require.NoError(t, err)
 				}
 			}

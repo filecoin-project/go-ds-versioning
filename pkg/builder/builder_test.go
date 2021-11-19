@@ -119,7 +119,7 @@ func TestExecuteMigration(t *testing.T) {
 					buf := new(bytes.Buffer)
 					err := value.MarshalCBOR(buf)
 					require.NoError(t, err)
-					err = ds1.Put(datastore.NewKey(key), buf.Bytes())
+					err = ds1.Put(ctx, datastore.NewKey(key), buf.Bytes())
 					require.NoError(t, err)
 				}
 			}
@@ -135,7 +135,7 @@ func TestExecuteMigration(t *testing.T) {
 				require.NoError(t, err)
 
 				outputDatabase := make(map[string]*cbg.CborInt)
-				res, err := ds2.Query(query.Query{})
+				res, err := ds2.Query(ctx, query.Query{})
 				require.NoError(t, err)
 				defer res.Close()
 				for {
@@ -158,7 +158,7 @@ func TestExecuteMigration(t *testing.T) {
 					require.NoError(t, err)
 
 					reversedDatabase := make(map[string]*cbg.CborInt)
-					res, err := ds3.Query(query.Query{})
+					res, err := ds3.Query(ctx, query.Query{})
 					require.NoError(t, err)
 					defer res.Close()
 					for {
