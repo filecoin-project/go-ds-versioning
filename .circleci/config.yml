@@ -1,11 +1,11 @@
 version: 2.1
 orbs:
-  go: gotest/tools@0.0.9
+  go: gotest/tools@0.0.14
 
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.14
+      - image: circleci/golang:1.16
     resource_class: small
 
 commands:
@@ -37,16 +37,6 @@ jobs:
       - prepare
       - go/mod-download
       - go/mod-tidy-check
-        
-  imports-check:
-    executor: golang
-    steps:
-      - install-deps
-      - prepare
-      - run: go install golang.org/x/tools/cmd/goimports
-      - run: scripts/fiximports
-      - run: git --no-pager diff
-      - run: git --no-pager diff --quiet
 
   test: &test
     description: |
@@ -169,4 +159,3 @@ workflows:
           args: "--new-from-rev origin/master"
       - test
       - mod-tidy-check
-      - imports-check

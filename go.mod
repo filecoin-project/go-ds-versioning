@@ -1,6 +1,6 @@
 module github.com/filecoin-project/go-ds-versioning
 
-go 1.14
+go 1.16
 
 require (
 	github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2
