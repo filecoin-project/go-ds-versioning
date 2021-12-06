@@ -21,19 +21,19 @@ import (
 
 // Execute executes a database migration from datastore to another, using the given migration function
 func Execute(ctx context.Context, q query.Query, oldDs datastore.Batching, newDS datastore.Batching, oldType reflect.Type, migrateFunc reflect.Value) ([]datastore.Key, error) {
-	qres, err := oldDs.Query(q)
+	qres, err := oldDs.Query(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 	defer qres.Close()
 
-	batch, err := newDS.Batch()
+	batch, err := newDS.Batch(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("batch error: %w", err)
 	}
 
 	keys, errs := execute(ctx, qres, oldDs, newDS, oldType, migrateFunc, batch)
-	err = batch.Commit()
+	err = batch.Commit(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("committing: %w", err)
 	}
@@ -67,7 +67,7 @@ func execute(ctx context.Context, qres query.Results, oldDs, newDS datastore.Bat
 			errs = multierr.Append(errs, fmt.Errorf("attempting to transform to new state '%s': %w", res.Key, err))
 			continue
 		}
-		has, err := newDS.Has(datastore.NewKey(res.Key))
+		has, err := newDS.Has(ctx, datastore.NewKey(res.Key))
 		if err != nil {
 			errs = err
 			return
@@ -81,7 +81,7 @@ func execute(ctx context.Context, qres query.Results, oldDs, newDS datastore.Bat
 			errs = multierr.Append(errs, fmt.Errorf("encoding state for key '%s': %w", res.Key, err))
 			continue
 		}
-		err = batch.Put(datastore.NewKey(res.Key), bts)
+		err = batch.Put(ctx, datastore.NewKey(res.Key), bts)
 		if err != nil {
 			errs = err
 			return
@@ -101,7 +101,7 @@ func To(ctx context.Context, ds datastore.Batching, migrations versioning.Versio
 	if !verifyIntegrity(migrations) {
 		return versioning.VersionKey(""), fmt.Errorf("migrations list must be contiguous")
 	}
-	verBytes, err := ds.Get(versioningKey)
+	verBytes, err := ds.Get(ctx, versioningKey)
 	if err == datastore.ErrNotFound {
 		hasData, err := notEmpty(ds)
 		if err != nil {
@@ -114,7 +114,7 @@ func To(ctx context.Context, ds datastore.Batching, migrations versioning.Versio
 			verBytes = []byte("")
 		} else {
 			// empty database -- we'll treat it as ready to go after writing current version
-			err = ds.Put(versioningKey, []byte(to))
+			err = ds.Put(ctx, versioningKey, []byte(to))
 			if err != nil {
 				return versioning.VersionKey(""), fmt.Errorf("writing version: %w", err)
 			}
@@ -126,7 +126,7 @@ func To(ctx context.Context, ds datastore.Batching, migrations versioning.Versio
 
 	currentVersion := versioning.VersionKey(verBytes)
 	final, err := runMigrations(ctx, ds, migrations, currentVersion, to)
-	ferr := ds.Put(versioningKey, []byte(final))
+	ferr := ds.Put(ctx, versioningKey, []byte(final))
 	if err != nil {
 		return final, err
 	}
@@ -140,12 +140,12 @@ func runMigrations(ctx context.Context, ds datastore.Batching, migrations versio
 				keys, err := migration.Up(ctx, ds)
 				if err != nil {
 					versionedKeys := utils.KeysForVersion(migration.NewVersion(), keys)
-					_ = deleteKeys(ds, versionedKeys)
+					_ = deleteKeys(ctx, ds, versionedKeys)
 					return current, fmt.Errorf("running up migration: %w", err)
 				}
 				current = migration.NewVersion()
 				versionedKeys := utils.KeysForVersion(migration.OldVersion(), keys)
-				err = deleteKeys(ds, versionedKeys)
+				err = deleteKeys(ctx, ds, versionedKeys)
 				if err != nil {
 					return current, fmt.Errorf("deleting keys: %w", err)
 				}
@@ -162,12 +162,12 @@ func runMigrations(ctx context.Context, ds datastore.Batching, migrations versio
 				keys, err := reversible.Down(ctx, ds)
 				if err != nil {
 					versionedKeys := utils.KeysForVersion(migration.OldVersion(), keys)
-					_ = deleteKeys(ds, versionedKeys)
+					_ = deleteKeys(ctx, ds, versionedKeys)
 					return current, fmt.Errorf("running down migration: %w", err)
 				}
 				current = migration.OldVersion()
 				versionedKeys := utils.KeysForVersion(migration.NewVersion(), keys)
-				err = deleteKeys(ds, versionedKeys)
+				err = deleteKeys(ctx, ds, versionedKeys)
 				if err != nil {
 					return current, fmt.Errorf("deleting keys: %w", err)
 				}
@@ -183,7 +183,7 @@ func runMigrations(ctx context.Context, ds datastore.Batching, migrations versio
 }
 
 func notEmpty(ds datastore.Batching) (bool, error) {
-	qres, err := ds.Query(query.Query{})
+	qres, err := ds.Query(context.TODO(), query.Query{})
 	if err != nil {
 		return false, err
 	}
@@ -192,20 +192,20 @@ func notEmpty(ds datastore.Batching) (bool, error) {
 	return hasData, err
 }
 
-func deleteKeys(ds datastore.Batching, keys []datastore.Key) error {
-	batch, err := ds.Batch()
+func deleteKeys(ctx context.Context, ds datastore.Batching, keys []datastore.Key) error {
+	batch, err := ds.Batch(ctx)
 	if err != nil {
 		return fmt.Errorf("batch error: %w", err)
 	}
 	for _, key := range keys {
-		err = batch.Delete(key)
+		err = batch.Delete(ctx, key)
 		if err != nil {
-			_ = batch.Commit()
+			_ = batch.Commit(ctx)
 			return err
 		}
 	}
 
-	err = batch.Commit()
+	err = batch.Commit(ctx)
 	if err != nil {
 		return fmt.Errorf("committing: %w", err)
 	}

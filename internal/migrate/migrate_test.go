@@ -143,7 +143,7 @@ func TestExecuteMigration(t *testing.T) {
 					buf := new(bytes.Buffer)
 					err := value.MarshalCBOR(buf)
 					require.NoError(t, err)
-					err = ds1.Put(datastore.NewKey(key), buf.Bytes())
+					err = ds1.Put(ctx, datastore.NewKey(key), buf.Bytes())
 					require.NoError(t, err)
 				}
 			}
@@ -152,7 +152,7 @@ func TestExecuteMigration(t *testing.T) {
 					buf := new(bytes.Buffer)
 					err := value.MarshalCBOR(buf)
 					require.NoError(t, err)
-					err = ds2.Put(datastore.NewKey(key), buf.Bytes())
+					err = ds2.Put(ctx, datastore.NewKey(key), buf.Bytes())
 					require.NoError(t, err)
 				}
 			}
@@ -171,7 +171,7 @@ func TestExecuteMigration(t *testing.T) {
 			sort.Slice(migrated, func(i, j int) bool { return migrated[i].String() < migrated[j].String() })
 			require.Equal(t, data.expectedKeys, migrated)
 			outputDatabase := make(map[string]cbg.CborBool)
-			res, err := ds2.Query(query.Query{})
+			res, err := ds2.Query(ctx, query.Query{})
 			require.NoError(t, err)
 			defer res.Close()
 			for {
@@ -394,7 +394,7 @@ func TestTo(t *testing.T) {
 			ds1 := datastore.NewMapDatastore()
 			if data.inputDatabase != nil {
 				for key, value := range data.inputDatabase {
-					err := ds1.Put(datastore.NewKey(key), value)
+					err := ds1.Put(ctx, datastore.NewKey(key), value)
 					require.NoError(t, err)
 				}
 			}
@@ -408,7 +408,7 @@ func TestTo(t *testing.T) {
 				require.EqualError(t, err, data.expectedErr.Error())
 			}
 			outputDatabase := make(map[string][]byte)
-			res, err := ds1.Query(query.Query{})
+			res, err := ds1.Query(ctx, query.Query{})
 			require.NoError(t, err)
 			defer res.Close()
 			for {
