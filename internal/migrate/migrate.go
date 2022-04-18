@@ -97,6 +97,9 @@ var versioningKey = datastore.NewKey("/versions/current")
 // and applying migrations as need to reach the target version
 // it returns the final database version (ideally = target) and any errors encountered
 func To(ctx context.Context, ds datastore.Batching, migrations versioning.VersionedMigrationList, to versioning.VersionKey) (versioning.VersionKey, error) {
+	if len(migrations) == 0 {
+		return versioning.VersionKey(""), fmt.Errorf("empty migrations list")
+	}
 	sort.Sort(migrations)
 	if !verifyIntegrity(migrations) {
 		return versioning.VersionKey(""), fmt.Errorf("migrations list must be contiguous")
