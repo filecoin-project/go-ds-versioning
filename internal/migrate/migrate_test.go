@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"go.uber.org/multierr"
-	"go4.org/sort"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
 
@@ -44,7 +43,7 @@ func TestExecuteMigration(t *testing.T) {
 		inputDatabase          map[string]cbg.CBORMarshaler
 		expectedOutputDatabase map[string]cbg.CborBool
 		preloadOutputs         map[string]cbg.CborBool
-		expectedKeys           []datastore.Key
+		expectedKeyLen         int
 		expectedErrs           []error
 		execute                func(ctx context.Context, ds1 datastore.Batching, ds2 datastore.Batching) ([]datastore.Key, error)
 	}{
@@ -57,7 +56,7 @@ func TestExecuteMigration(t *testing.T) {
 				"/apples":  true,
 				"/oranges": false,
 			},
-			expectedKeys: []datastore.Key{datastore.NewKey("/apples"), datastore.NewKey("/oranges")},
+			expectedKeyLen: 2,
 		},
 		"issue unmarshalling old values": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -69,8 +68,8 @@ func TestExecuteMigration(t *testing.T) {
 				"/apples":  true,
 				"/oranges": false,
 			},
-			expectedErrs: []error{errors.New("decoding state for key '/anotherkind': wrong type for int64 field: 7")},
-			expectedKeys: []datastore.Key{datastore.NewKey("/apples"), datastore.NewKey("/oranges")},
+			expectedErrs:   []error{errors.New("decoding state for key '/anotherkind': wrong type for int64 field: 7")},
+			expectedKeyLen: 2,
 		},
 		"issue transforming a value": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -82,8 +81,8 @@ func TestExecuteMigration(t *testing.T) {
 				"/apples":  true,
 				"/oranges": false,
 			},
-			expectedErrs: []error{errors.New("attempting to transform to new state '/untransformable': the meaning of life is untransformable")},
-			expectedKeys: []datastore.Key{datastore.NewKey("/apples"), datastore.NewKey("/oranges")},
+			expectedErrs:   []error{errors.New("attempting to transform to new state '/untransformable': the meaning of life is untransformable")},
+			expectedKeyLen: 2,
 		},
 		"value already tracked in DS": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -97,8 +96,8 @@ func TestExecuteMigration(t *testing.T) {
 			preloadOutputs: map[string]cbg.CborBool{
 				"/apples": false,
 			},
-			expectedErrs: []error{errors.New("already tracking state in new db for '/apples'")},
-			expectedKeys: []datastore.Key{datastore.NewKey("/oranges")},
+			expectedErrs:   []error{errors.New("already tracking state in new db for '/apples'")},
+			expectedKeyLen: 1,
 		},
 		"context cancelled": {
 			inputDatabase: map[string]cbg.CBORMarshaler{
@@ -108,8 +107,8 @@ func TestExecuteMigration(t *testing.T) {
 			expectedOutputDatabase: map[string]cbg.CborBool{
 				"/apples": true,
 			},
-			expectedKeys: []datastore.Key{datastore.NewKey("/apples")},
-			expectedErrs: []error{versioning.ErrContextCancelled},
+			expectedKeyLen: 1,
+			expectedErrs:   []error{versioning.ErrContextCancelled},
 			execute: func(ctx context.Context, ds1 datastore.Batching, ds2 datastore.Batching) ([]datastore.Key, error) {
 				closing := make(chan struct{})
 				closed := make(chan struct{})
@@ -168,8 +167,7 @@ func TestExecuteMigration(t *testing.T) {
 			for i, err := range errs {
 				require.EqualError(t, err, data.expectedErrs[i].Error())
 			}
-			sort.Slice(migrated, func(i, j int) bool { return migrated[i].String() < migrated[j].String() })
-			require.Equal(t, data.expectedKeys, migrated)
+			require.Len(t, migrated, data.expectedKeyLen)
 			outputDatabase := make(map[string]cbg.CborBool)
 			res, err := ds2.Query(ctx, query.Query{})
 			require.NoError(t, err)
@@ -386,6 +384,19 @@ func TestTo(t *testing.T) {
 			migrationBuilders: versioned.BuilderList{
 				versioned.NewVersionedBuilder(addMigration, "2").OldVersion("1"),
 				versioned.NewVersionedBuilder(errorMigration, "3").OldVersion("2"),
+			},
+		},
+		"no migrations": {
+			expectedFinalVersion: "2",
+			target:               "2",
+			inputDatabase: map[string][]byte{
+				"/apples":  numData(t, 56),
+				"/oranges": numData(t, 40),
+			},
+			expectedOutputDatabase: map[string][]byte{
+				"/versions/current": versionData("2"),
+				"/apples":           numData(t, 56),
+				"/oranges":          numData(t, 40),
 			},
 		},
 	}
