@@ -107,7 +107,7 @@ func To(ctx context.Context, ds datastore.Batching, migrations versioning.Versio
 		if err != nil {
 			return versioning.VersionKey(""), fmt.Errorf("determining if store has data: %w", err)
 		}
-		if hasData {
+		if hasData && len(migrations) > 0 {
 			if migrations[0].OldVersion() != versioning.VersionKey("") {
 				return versioning.VersionKey(""), errors.New("cannot migrate from an unversioned database")
 			}

@@ -11,5 +11,7 @@ require (
 	github.com/whyrusleeping/cbor-gen v0.0.0-20200826160007-0b9f6c5fb163
 	go.uber.org/atomic v1.6.0
 	go.uber.org/multierr v1.5.0
-	go4.org v0.0.0-20200411211856-f5505b9728dd
+	golang.org/x/lint v0.0.0-20200130185559-910be7a94367 // indirect
+	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae // indirect
+	golang.org/x/tools v0.0.0-20200212150539-ea181f53ac56 // indirect
 )
